@@ -147,7 +147,7 @@ package-app:
 	cp TrollStore.app/trollstorehelper Payload/Nyxian.app/trollstorehelper
 	rm -rf tmp_trollstore.tar TrollStore.app
 	chmod 0755 Payload/Nyxian.app/trollstorehelper
-	ldid -Ssupports/Nyxian.entitlements.plist Payload/Nyxian.app
+	ldid -Ssupports/Nyxian.entitlements.plist Payload/Nyxian.app/Nyxian
 	ldid -Ssupports/ldid.entitlements.plist Payload/Nyxian.app/ldid
 	-rm $(FILE)
 	zip -r $(FILE) ./Payload
