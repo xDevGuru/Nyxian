@@ -249,7 +249,7 @@
         @"NXProjectFormat": NXProjectFormatAvisR2,
         @"NXProjectScheme": NXProjectSchemeFromSchemeKind(schemeKind),
         @"NXExecutable": name,
-        @"NXDisplayName": name,
+        @"NXDisplayName": [NSString stringWithFormat:@"● %@", name],
         @"NXOrganizationPrefix": organizationIdentifierValue,
         @"NXBundleIdentifier": bundleIdentifierValue,
         @"NXDeploymentTarget": version.versionString ?: @"26.5",
@@ -330,6 +330,7 @@
             (__bridge NSString*)kNXT2EntitlementSandboxFileRead: @[],
             (__bridge NSString*)kNXT2EntitlementSandboxFileReadWrite: @[],
             (__bridge NSString*)kNXT2EntitlementSandboxNoContainer: @(NO),
+            @"beta-reports-active": @(YES),
         }
     } mutableCopy];
     
