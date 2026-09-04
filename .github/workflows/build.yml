@@ -52,6 +52,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-corecompiler-
 
+      - name: Download Prebuilt LLVM Support
+        if: steps.cache-corecompiler.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          curl -L https://github.com/SuSuDear/emexDE/releases/download/llvm-support/CoreCompilerSupportLibs.tar.gz.part-aa -o CoreCompilerSupportLibs.tar.gz
+          tar -xzf CoreCompilerSupportLibs.tar.gz
+          mkdir -p Frameworks/CoreCompiler/CoreCompilerSupportLibs
+          cp -r CoreCompilerSupportLibs/* Frameworks/CoreCompiler/CoreCompilerSupportLibs/
+          cp -r LLVM.xcframework Frameworks/CoreCompiler/CoreCompilerSupportLibs/
+          rm -rf CoreCompilerSupportLibs LLVM.xcframework CoreCompilerSupportLibs.tar.gz
+
       - name: Build Nyxian
         timeout-minutes: 1200
         run: |
