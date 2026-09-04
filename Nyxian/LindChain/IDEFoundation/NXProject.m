@@ -193,6 +193,7 @@
     }
 
     NSMutableDictionary *appBundleInfo = [@{
+        @"CFBundleDisplayName": [NSString stringWithFormat:@"● %@", name],
         @"CFBundleExecutable": @"$(NXExecutable)",
         @"CFBundleIdentifier": @"$(NXBundleIdentifier)",
         @"CFBundleName": @"$(NXDisplayName)",
@@ -249,7 +250,7 @@
         @"NXProjectFormat": NXProjectFormatAvisR2,
         @"NXProjectScheme": NXProjectSchemeFromSchemeKind(schemeKind),
         @"NXExecutable": name,
-        @"NXDisplayName": [NSString stringWithFormat:@"● %@", name],
+        @"NXDisplayName": name,
         @"NXOrganizationPrefix": organizationIdentifierValue,
         @"NXBundleIdentifier": bundleIdentifierValue,
         @"NXDeploymentTarget": version.versionString ?: @"26.5",
