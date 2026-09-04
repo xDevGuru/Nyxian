@@ -1,6 +1,6 @@
 <div align="center">
   <h1><b>Nyxian</b></h1>
-  <p><i>A full native IDE and a userspace microkernel for building and running iOS apps entirely on-device. offline, unjailbroken, iOS 18.4 through iOS 27 Beta 4</i></p>
+  <p><i>A full native IDE and a userspace microkernel for building and running iOS apps entirely on-device. offline, unjailbroken, iOS 17.0 through iOS 27 Beta 4</i></p>
 </div>
 <h6 align="center">
   <a target="_blank" href="https://discord.gg/H96bhkAHjB"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscord.com%2Fapi%2Fv9%2Finvites%2FH96bhkAHjB&amp;query=profile.member_count&amp;suffix=%20Members&amp;style=for-the-badge&amp;logo=discord&amp;logoColor=fff&amp;label=emexLabs%20Discord&amp;labelColor=000&amp;color=fff" alt="Discord invite"></a>
@@ -11,7 +11,7 @@
 </p>
 
 ## What is it?
-Nyxian is an iOS app that empowers developers with a full toolchain they can use while even being offline for iOS development on iPhone. It supports Swift, C, Objective-C, C++ and Objective-C++. It’s a powerful IDE that made the impossible possible, a fully on-device iOS IDE that doesn’t even need a cloud and can even be used with airplane mode enabled after it downloaded the SDK and resources from our server. It supports officially iOS 18.4 all the way up to the latest iOS version (iOS/iPadOS 27 Beta 4 tested). You can compile and run iOS apps on the go with ease, using the entire iOS 26.5 SDK.
+Nyxian is an iOS app that empowers developers with a full toolchain they can use while even being offline for iOS development on iPhone. It supports Swift, C, Objective-C, C++ and Objective-C++. It’s a powerful IDE that made the impossible possible, a fully on-device iOS IDE that doesn’t even need a cloud and can even be used with airplane mode enabled after it downloaded the SDK and resources from our server. It supports officially iOS 17.0 all the way up to the latest iOS version (iOS/iPadOS 27 Beta 4 tested). You can compile and run iOS apps on the go with ease, using the entire iOS 26.5 SDK.
 
 ## Installation
 To start using Nyxian view the [Installation Guide](https://emexlabs.org/Nyxian/docs/installation/).

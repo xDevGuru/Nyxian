@@ -178,7 +178,7 @@ struct UIOnboardingHelper {
             .init(icon: UIImage(systemName: "hammer.fill")!,
                 iconTint: UIColor { trait in trait.userInterfaceStyle == .dark ? UIColor(red: 0.55, green: 0.78, blue: 0.98, alpha: 1.0) : UIColor(red: 0.30, green: 0.58, blue: 0.88, alpha: 1.0) },
                 title: "Development",
-                description: "A full development environment supporting Swift, C, C++, Objective-C and Objective-C++ that runs on any iOS 18.4+ iPhone or iPad."),
+                description: "A full development environment supporting Swift, C, C++, Objective-C and Objective-C++ that runs on any iOS 17.0+ iPhone or iPad."),
             .init(icon: UIImage(systemName: "wrench.and.screwdriver.fill")!,
                 iconTint: UIColor { trait in trait.userInterfaceStyle == .dark ? UIColor(red: 0.78, green: 0.71, blue: 0.95, alpha: 1.0) : UIColor(red: 0.55, green: 0.45, blue: 0.85, alpha: 1.0) },
                 title: "MobileDevelopmentKit",

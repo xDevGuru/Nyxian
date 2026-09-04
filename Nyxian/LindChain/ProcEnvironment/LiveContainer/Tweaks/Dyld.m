@@ -236,8 +236,10 @@ bool performHookDyldApi(const char* functionName, uint32_t adrpOffset, void** or
     kern_return_t ret = builtin_vm_protect(mach_task_self(), (mach_vm_address_t)vtableFunctionPtr, sizeof(uintptr_t), false, PROT_READ | PROT_WRITE | VM_PROT_COPY);
     if(ret != KERN_SUCCESS)
     {
-        assert(os_tpro_is_supported());
-        os_thread_self_restrict_tpro_to_rw();
+        if(os_tpro_is_supported())
+        {
+            os_thread_self_restrict_tpro_to_rw();
+        }
     }
     
     if(origFunction != NULL)
@@ -249,8 +251,10 @@ bool performHookDyldApi(const char* functionName, uint32_t adrpOffset, void** or
     builtin_vm_protect(mach_task_self(), (mach_vm_address_t)vtableFunctionPtr, sizeof(uintptr_t), false, PROT_READ);
     if(ret != KERN_SUCCESS)
     {
-        assert(os_tpro_is_supported());
-        os_thread_self_restrict_tpro_to_ro();
+        if(os_tpro_is_supported())
+        {
+            os_thread_self_restrict_tpro_to_ro();
+        }
     }
     return true;
 }

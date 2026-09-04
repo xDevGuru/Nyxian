@@ -435,7 +435,7 @@ void ksurface_kext_free_deps(kmod_dependency_t *deps)
     
     PEDependency *dependency = [[PEDependency alloc] init];
     dependency.bundleID = @"com.apple.iphoneos";
-    dependency.minVersion = @"18.4.0";
+    dependency.minVersion = @"16.0.0";
     dependency.maxVersion = @"99.99.99";
     
     kext.dependencies = @[dependency];

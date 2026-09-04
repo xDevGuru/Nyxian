@@ -70,14 +70,19 @@ int hook__NSGetExecutablePath_overwriteExecPath(char*** dyldApiInstancePtr, char
     kern_return_t ret = builtin_vm_protect(mach_task_self(), (mach_vm_address_t)mainExecutablePathPtr, sizeof(mainExecutablePathPtr), false, PROT_READ | PROT_WRITE);
     if(ret != KERN_SUCCESS)
     {
-        assert(os_tpro_is_supported());
-        os_thread_self_restrict_tpro_to_rw();
+        if(os_tpro_is_supported())
+        {
+            os_thread_self_restrict_tpro_to_rw();
+        }
     }
     /* MARK: setting a copy of the path as the new pointer (required cuz objc NSString UTF8String pointers are not safe and can become stale) */
     *mainExecutablePathPtr = strdup(newPath);
     if(ret != KERN_SUCCESS)
     {
-        os_thread_self_restrict_tpro_to_ro();
+        if(os_tpro_is_supported())
+        {
+            os_thread_self_restrict_tpro_to_ro();
+        }
     }
 
     return 0;

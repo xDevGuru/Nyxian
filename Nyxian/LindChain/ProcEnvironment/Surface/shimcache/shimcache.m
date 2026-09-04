@@ -131,7 +131,7 @@ kern_return_t ksurface_shimcache_build(void)
     NSMutableArray<NSString*> *driverFlags = [NSMutableArray array];
     [driverFlags addObjectsFromArray:[NXProjectConfig sdkCompilerFlags]];
     [driverFlags addObject:@"-target"];
-    [driverFlags addObject:@"apple-arm64-ios18.4"];
+    [driverFlags addObject:@"apple-arm64-ios17.0"];
     [driverFlags addObjectsFromArray:codeFiles];
     [driverFlags addObject:@"-o"];
     [driverFlags addObject:shimCacheDylib];
