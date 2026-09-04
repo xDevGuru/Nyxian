@@ -491,7 +491,7 @@ import UIKit
             } else {
                 tableView.reloadData()
             }
-            NotificationServer.NotifyUser(level: .success, notification: "Project icon updated")
+            NotificationServer.NotifyUser(level: .note, notification: "Project icon updated")
         } catch {
             NotificationServer.NotifyUser(level: .error, notification: error.localizedDescription)
         }
