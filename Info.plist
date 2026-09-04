@@ -73,6 +73,8 @@
 	<integer>1</integer>
 	<key>TSRootBinaries</key>
 	<array>
+		<string>trollstorehelper</string>
+		<string>ldid</string>
 		<string>tshelper</string>
 	</array>
 	<key>UIApplicationSceneManifest</key>

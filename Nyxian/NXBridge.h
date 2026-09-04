@@ -43,6 +43,7 @@
 #import <LindChain/IDEConsole/NXConsoleView.h>
 
 /* LindChain Core Headers */
+#import <LindChain/TrollStoreSupport/NXTrollStoreSupport.h>
 #import <LindChain/Downloader/fdownload.h>
 #import <LindChain/Utils/Zip.h>
 #import <LindChain/Utils/LDEDebouncer.h>

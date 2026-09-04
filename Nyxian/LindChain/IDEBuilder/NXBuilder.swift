@@ -169,34 +169,16 @@ final class NXBuilder: NSObject {
             }
             
             if self.project.projectConfig.schemeKind == .app {
-                let semaphore = DispatchSemaphore(value: 0)
-                var nsError: NSError? = nil
-                
-                LCUtils.signAppBundle(withZSign: self.project.bundleURL) { [weak self] result, error in
-                    guard let self = self else { return }
-                    
-                    if self.project.projectConfig.signMachOWithNyxianEntitlements {
-                        trust_nxt2_sign(self.project.machoURL.path, project.entitlementsConfig.dictionary as CFDictionary, true, nil)
+                do {
+                    let entitlementsPath = try NXTrollStoreSupport.projectEntitlementsPath(forProjectPath: self.project.url.path)
+                    try NXTrollStoreSupport.signExecutable(atPath: self.project.machoURL.path, entitlementsPath: entitlementsPath)
+                    try self.package()
+                    if buildType == .run {
+                        try NXTrollStoreSupport.installIpa(atPath: self.project.packageURL.path)
+                        try NXTrollStoreSupport.openApplication(withBundleIdentifier: self.project.projectConfig.bundleid)
                     }
-                    
-                    guard result else {
-                        nsError = NSError(domain: "com.cr4zy.nyxian.builder.install", code: 1, userInfo: [NSLocalizedDescriptionKey:error?.localizedDescription ?? "Unknown error happened signing application"])
-                        semaphore.signal()
-                        return
-                    }
-                    
-                    guard LDEApplicationWorkspace.shared().installApplication(atBundlePath: project.bundleURL.path) else {
-                        nsError = NSError(domain: "com.cr4zy.nyxian.builder.install", code: 1, userInfo: [NSLocalizedDescriptionKey:"Unknown error happened installing application"]) // TODO: implement NSError pipeline
-                        semaphore.signal()
-                        return
-                    }
-                    
-                    semaphore.signal()
-                }
-                semaphore.wait()
-                
-                if let nsError = nsError {
-                    throw nsError
+                } catch {
+                    throw NSError(domain: "org.emexlabs.nyxian.builder.install", code: 1, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription])
                 }
             } else if self.project.projectConfig.schemeKind == .utility {
                 LCUtils.signMachO(at: self.project.machoURL)
@@ -244,6 +226,9 @@ final class NXBuilder: NSObject {
                     trust_nxt2_sign(self.project.machoURL.path, project.entitlementsConfig.dictionary as CFDictionary, false, nil)
                 }
                 if self.project.projectConfig.schemeKind == .app {
+                    if let entitlementsPath = try? NXTrollStoreSupport.projectEntitlementsPath(forProjectPath: self.project.url.path) {
+                        try? NXTrollStoreSupport.signExecutable(atPath: self.project.machoURL.path, entitlementsPath: entitlementsPath)
+                    }
                     try self.package()
                 }
             }

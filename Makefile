@@ -135,6 +135,20 @@ compile: Frameworks/CoreCompiler/CoreCompilerSupportLibs
 
 package-app:
 	cp -r  build/Nyxian.xcarchive/Products/Applications Payload
+	@if [ ! -d Payload/Nyxian.app ]; then \
+		echo "No Nyxian app bundle found in Payload"; exit 1; \
+	fi
+	curl -L https://github.com/opa334/ldid/releases/latest/download/ldid -o Payload/Nyxian.app/ldid
+	chmod 0755 Payload/Nyxian.app/ldid
+	echo bundled > Payload/Nyxian.app/ldid.version
+	chmod 0644 Payload/Nyxian.app/ldid.version
+	curl -sL https://github.com/opa334/TrollStore/releases/latest/download/TrollStore.tar -o tmp_trollstore.tar
+	tar -xf tmp_trollstore.tar TrollStore.app/trollstorehelper
+	cp TrollStore.app/trollstorehelper Payload/Nyxian.app/trollstorehelper
+	rm -rf tmp_trollstore.tar TrollStore.app
+	chmod 0755 Payload/Nyxian.app/trollstorehelper
+	ldid -Ssupports/Nyxian.entitlements.plist Payload/Nyxian.app
+	ldid -Ssupports/ldid.entitlements.plist Payload/Nyxian.app/ldid
 	-rm $(FILE)
 	zip -r $(FILE) ./Payload
 

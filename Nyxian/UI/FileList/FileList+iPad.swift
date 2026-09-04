@@ -257,9 +257,7 @@ class MainSplitViewController: UISplitViewController, UISplitViewControllerDeleg
                         
                         var processIdentifier: pid_t = -1
                         
-                        if project.projectConfig.schemeKind == .app {
-                            processIdentifier = PEProcessManager.shared().spawnProcess(withBundleIdentifier: project.projectConfig.bundleid, withItems: ["PEFileTable":fileTable], withKernelSurfaceProcess: nil, doRestartIfRunning: true)
-                        } else if project.projectConfig.schemeKind == .utility, let execPath = execPath {
+                        if project.projectConfig.schemeKind == .utility, let execPath = execPath {
                             guard let homePath: String = LDEApplicationWorkspace.shared().utilityHomePath() else {
                                 return
                             }
