@@ -1,6 +1,7 @@
 <div align="center">
   <h1><b>Nyxian</b></h1>
   <p><i>A full native IDE and a userspace microkernel for building and running iOS apps entirely on-device. offline, unjailbroken, iOS 17.0 through iOS 27 Beta 4</i></p>
+  <p><b><a href="./PATCH_NOTES.md">📖 iOS 17.0 & TrollStore Patch Notes & Rebase Guide</a></b></p>
 </div>
 <h6 align="center">
   <a target="_blank" href="https://discord.gg/H96bhkAHjB"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscord.com%2Fapi%2Fv9%2Finvites%2FH96bhkAHjB&amp;query=profile.member_count&amp;suffix=%20Members&amp;style=for-the-badge&amp;logo=discord&amp;logoColor=fff&amp;label=emexLabs%20Discord&amp;labelColor=000&amp;color=fff" alt="Discord invite"></a>
