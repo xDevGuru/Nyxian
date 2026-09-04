@@ -529,7 +529,8 @@ import UniformTypeIdentifiers
             self.navigationController?.pushViewController(fileVC, animated: true)
             break
         case .file:
-            if ["zip","ipa"].contains(URL(fileURLWithPath: fileListEntry.path).pathExtension)  {
+            let ext = URL(fileURLWithPath: fileListEntry.path).pathExtension.lowercased()
+            if ["zip","ipa"].contains(ext)  {
                 let folder: URL = PasteBoardServices.resolvedDestinationURL(for: (fileListEntry.path as NSString).lastPathComponent, inDirectory: self.path)
                 if ((try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)) != nil) {
                     if(unzipArchiveAtPath(fileListEntry.path, folder.path)) {
@@ -539,6 +540,11 @@ import UniformTypeIdentifiers
                         NotificationServer.NotifyUser(level: .error, notification: "Failed to unzip \(fileListEntry.path)")
                     }
                 }
+            } else if ["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "heic", "heif", "tiff", "tif"].contains(ext) {
+                let imageViewer = ImagePreviewViewController(fileURL: URL(fileURLWithPath: fileListEntry.path))
+                let nav = UINavigationController(rootViewController: imageViewer)
+                nav.modalPresentationStyle = .fullScreen
+                self.present(nav, animated: true)
             } else {
                 if NXApplicationState.fileListRequiresToSendRequests {
                     NotificationCenter.default.post(name: Notification.Name("FileListAct"), object: ["open",fileListEntry.path,"0","0",self.isReadOnly ? "1" : "0"])

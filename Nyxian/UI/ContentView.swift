@@ -23,9 +23,11 @@ import Foundation
 import SwiftUI
 import UIKit
 
-@objc class ContentViewController: UIThemedTableViewController, UIDocumentPickerDelegate, UIAdaptivePresentationControllerDelegate {
+@objc class ContentViewController: UIThemedTableViewController, UIDocumentPickerDelegate, UIAdaptivePresentationControllerDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     var sessionIndex: IndexPath? = nil
     var projectsList: [String:[NXProject]] = [:]
+    var iconPickerProject: NXProject? = nil
+    var iconPickerIndexPath: IndexPath? = nil
     
     @objc init() {
         super.init(style: .insetGrouped)
@@ -242,18 +244,265 @@ import UIKit
         return self.projectsList.count
     }
     
+    private func defaultIcon(for project: NXProject) -> UIImage? {
+        switch project.projectConfig?.schemeKind {
+        case .app: return UIImage(named: "DefaultIcon")
+        case .kSurfaceKext: return UIImage(systemName: "puzzlepiece.extension.fill")
+        default: return UIImage(named: "UtilityIcon")
+        }
+    }
+
+    private func configuredPrimaryIcon(for project: NXProject) -> UIImage? {
+        guard project.projectConfig?.schemeKind == .app else {
+            return nil
+        }
+
+        let fileManager = FileManager.default
+        let searchDirectories: [URL] = [
+            project.resourcesURL,
+            project.url
+        ].compactMap { $0 }
+
+        // 1. Check CFBundleIcons -> CFBundlePrimaryIcon -> CFBundleIconFiles
+        if let infoDict = project.projectConfig?.infoDictionary,
+           let icons = infoDict["CFBundleIcons"] as? [String: Any],
+           let primaryIcon = icons["CFBundlePrimaryIcon"] as? [String: Any],
+           let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String],
+           !iconFiles.isEmpty {
+            for iconFile in iconFiles.reversed() {
+                let baseName = (iconFile as NSString).deletingPathExtension
+                let ext = (iconFile as NSString).pathExtension
+                let candidates: [String]
+                if ext.isEmpty {
+                    candidates = [
+                        "\(baseName)@3x.png",
+                        "\(baseName)@2x.png",
+                        "\(baseName).png",
+                        "\(baseName)@3x.jpg",
+                        "\(baseName)@2x.jpg",
+                        "\(baseName).jpg",
+                        "\(baseName)@3x.jpeg",
+                        "\(baseName)@2x.jpeg",
+                        "\(baseName).jpeg"
+                    ]
+                } else {
+                    candidates = [
+                        "\(baseName)@3x.\(ext)",
+                        "\(baseName)@2x.\(ext)",
+                        iconFile
+                    ]
+                }
+                for dir in searchDirectories {
+                    for candidate in candidates {
+                        let path = dir.appendingPathComponent(candidate).path
+                        if fileManager.fileExists(atPath: path), let image = UIImage(contentsOfFile: path) {
+                            return image
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Check CFBundleIconFile
+        if let infoDict = project.projectConfig?.infoDictionary,
+           let iconFile = infoDict["CFBundleIconFile"] as? String,
+           !iconFile.isEmpty {
+            let baseName = (iconFile as NSString).deletingPathExtension
+            let ext = (iconFile as NSString).pathExtension
+            let candidates = ext.isEmpty ? [
+                "\(baseName)@3x.png", "\(baseName)@2x.png", "\(baseName).png",
+                "\(baseName)@3x.jpg", "\(baseName)@2x.jpg", "\(baseName).jpg"
+            ] : [ "\(baseName)@3x.\(ext)", "\(baseName)@2x.\(ext)", iconFile ]
+            for dir in searchDirectories {
+                for candidate in candidates {
+                    let path = dir.appendingPathComponent(candidate).path
+                    if fileManager.fileExists(atPath: path), let image = UIImage(contentsOfFile: path) {
+                        return image
+                    }
+                }
+            }
+        }
+
+        // 3. Fallback to standard icon names in Resources/ and project root
+        let standardNames = [
+            "AppIcon60x60@3x.png",
+            "AppIcon60x60@2x.png",
+            "AppIcon60x60.png",
+            "AppIcon76x76@2x~ipad.png",
+            "AppIcon76x76@2x.png",
+            "AppIcon76x76.png",
+            "AppIcon@3x.png",
+            "AppIcon@2x.png",
+            "AppIcon.png",
+            "icon@3x.png",
+            "icon@2x.png",
+            "icon.png",
+            "Icon-60@3x.png",
+            "Icon-60@2x.png",
+            "Icon.png"
+        ]
+        for dir in searchDirectories {
+            for candidate in standardNames {
+                let path = dir.appendingPathComponent(candidate).path
+                if fileManager.fileExists(atPath: path), let image = UIImage(contentsOfFile: path) {
+                    return image
+                }
+            }
+        }
+
+        // 4. Check any file in Resources starting with AppIcon or Icon
+        if let resourcesURL = project.resourcesURL,
+           let contents = try? fileManager.contentsOfDirectory(atPath: resourcesURL.path) {
+            for item in contents {
+                let lower = item.lowercased()
+                if (lower.hasPrefix("appicon") || lower.hasPrefix("icon")) &&
+                   (lower.hasSuffix(".png") || lower.hasSuffix(".jpg") || lower.hasSuffix(".jpeg")) {
+                    let path = resourcesURL.appendingPathComponent(item).path
+                    if let image = UIImage(contentsOfFile: path) {
+                        return image
+                    }
+                }
+            }
+        }
+
+        return nil
+    }
+
+    private func projectIcon(for project: NXProject) -> UIImage? {
+        return configuredPrimaryIcon(for: project) ?? defaultIcon(for: project)
+    }
+
+    private func canPickIcon(for project: NXProject) -> Bool {
+        return project.projectConfig?.schemeKind == .app
+    }
+
+    private func presentIconPicker(for project: NXProject, at indexPath: IndexPath) {
+        guard canPickIcon(for: project) else { return }
+        guard UIImagePickerController.isSourceTypeAvailable(.photoLibrary) else {
+            NotificationServer.NotifyUser(level: .error, notification: "Photo Library is not available")
+            return
+        }
+
+        iconPickerProject = project
+        iconPickerIndexPath = indexPath
+
+        let picker = UIImagePickerController()
+        picker.sourceType = .photoLibrary
+        picker.mediaTypes = ["public.image"]
+        picker.allowsEditing = true
+        picker.delegate = self
+        present(picker, animated: true)
+    }
+
+    private func squareImage(from image: UIImage) -> UIImage? {
+        guard let cgImage = image.cgImage else { return nil }
+        let width = CGFloat(cgImage.width)
+        let height = CGFloat(cgImage.height)
+        let side = min(width, height)
+        let rect = CGRect(x: (width - side) / 2, y: (height - side) / 2, width: side, height: side)
+        guard let cropped = cgImage.cropping(to: rect) else { return nil }
+        return UIImage(cgImage: cropped, scale: image.scale, orientation: image.imageOrientation)
+    }
+
+    private func resizedPNGData(from image: UIImage, size: CGSize) -> Data? {
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let resized = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }
+        return resized.pngData()
+    }
+
+    private func saveIcon(_ image: UIImage, for project: NXProject) throws {
+        guard let resourcesURL = project.resourcesURL else {
+            throw NSError(domain: "com.emexlab.nyxian.projectIcon", code: 5, userInfo: [NSLocalizedDescriptionKey: "Resources folder is not available"])
+        }
+
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(at: resourcesURL, withIntermediateDirectories: true)
+
+        guard let square = squareImage(from: image) else {
+            throw NSError(domain: "com.emexlab.nyxian.projectIcon", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid image"])
+        }
+
+        let files: [(String, CGSize)] = [
+            ("AppIcon60x60.png", CGSize(width: 60, height: 60)),
+            ("AppIcon60x60@2x.png", CGSize(width: 120, height: 120)),
+            ("AppIcon60x60@3x.png", CGSize(width: 180, height: 180))
+        ]
+
+        for (fileName, size) in files {
+            guard let data = resizedPNGData(from: square, size: size) else {
+                throw NSError(domain: "com.emexlab.nyxian.projectIcon", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to resize image"])
+            }
+            try data.write(to: resourcesURL.appendingPathComponent(fileName), options: .atomic)
+        }
+
+        let plistURL = project.url.appendingPathComponent("Config/Project.plist")
+        let plistData = try Data(contentsOf: plistURL)
+        guard var plist = try PropertyListSerialization.propertyList(from: plistData, options: [], format: nil) as? [String: Any] else {
+            throw NSError(domain: "com.emexlab.nyxian.projectIcon", code: 3, userInfo: [NSLocalizedDescriptionKey: "Invalid Project.plist"])
+        }
+
+        let iconInfo: [String: Any] = [
+            "CFBundlePrimaryIcon": [
+                "CFBundleIconFiles": ["AppIcon60x60"],
+                "CFBundleIconName": "AppIcon"
+            ]
+        ]
+
+        if var bundleInfo = plist["NXBundleInfo"] as? [String: Any] {
+            bundleInfo["CFBundleIcons"] = iconInfo
+            plist["NXBundleInfo"] = bundleInfo
+        } else {
+            plist["NXBundleInfo"] = [
+                "CFBundleIcons": iconInfo
+            ]
+        }
+
+        let outputData = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+        try outputData.write(to: plistURL, options: .atomic)
+        _ = project.reload()
+    }
+
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        picker.dismiss(animated: true)
+        iconPickerProject = nil
+        iconPickerIndexPath = nil
+    }
+
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        picker.dismiss(animated: true)
+
+        guard let project = iconPickerProject,
+              let selectedImage = (info[.editedImage] as? UIImage) ?? (info[.originalImage] as? UIImage) else {
+            iconPickerProject = nil
+            iconPickerIndexPath = nil
+            return
+        }
+
+        let indexPath = iconPickerIndexPath
+        iconPickerProject = nil
+        iconPickerIndexPath = nil
+
+        do {
+            try saveIcon(selectedImage, for: project)
+            if let indexPath = indexPath {
+                tableView.reloadRows(at: [indexPath], with: .automatic)
+            } else {
+                tableView.reloadData()
+            }
+            NotificationServer.NotifyUser(level: .success, notification: "Project icon updated")
+        } catch {
+            NotificationServer.NotifyUser(level: .error, notification: error.localizedDescription)
+        }
+    }
+
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let key = sortedSectionKeys[indexPath.section]
         let sectionProjects = self.projectsList[key] ?? []
         let project: NXProject = sectionProjects[indexPath.row]
         let cell: ProjectTableCell = (self.tableView.dequeueReusableCell(withIdentifier: ProjectTableCell.reuseIdentifier) as? ProjectTableCell) ?? ProjectTableCell(style: .default, reuseIdentifier: ProjectTableCell.reuseIdentifier)
-        let icon: UIImage? = {
-            switch project.projectConfig?.schemeKind {
-            case .app: return UIImage(named: "DefaultIcon")
-            case .kSurfaceKext: return UIImage(systemName: "puzzlepiece.extension.fill")
-            default: return UIImage(named: "UtilityIcon")
-            }
-        }()
+        let icon: UIImage? = self.projectIcon(for: project)
         cell.configure(displayName: project.projectConfig?.displayName ?? "Project", bundleIdentifier: project.projectConfig?.bundleid, appIcon: icon, showArrow: UIDevice.current.userInterfaceIdiom != .pad)
         return cell
     }
@@ -280,12 +529,12 @@ import UIKit
     
     override func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
         return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { suggestedActions in
+            let key = self.sortedSectionKeys[indexPath.section]
+            let sectionProjects = self.projectsList[key] ?? []
+            let project: NXProject = sectionProjects[indexPath.row]
+
             let export: UIAction = UIAction(title: "Export", image: UIImage(systemName: "square.and.arrow.up.fill")) { _ in
                 DispatchQueue.global().async {
-                    let key = self.sortedSectionKeys[indexPath.section]
-                    let sectionProjects = self.projectsList[key] ?? []
-                    let project: NXProject = sectionProjects[indexPath.row]
-                    
                     let dispName = project.projectConfig?.displayName ?? "Project"
                     let zipPath: String = "\(NSTemporaryDirectory())/\(dispName).zip"
                     zipDirectoryAtPath(project.url.path, zipPath, true)
@@ -294,9 +543,6 @@ import UIKit
             }
             
             let item: UIAction = UIAction(title: "Remove", image: UIImage(systemName: "trash.fill"), attributes: .destructive) { _ in
-                let key = self.sortedSectionKeys[indexPath.section]
-                let sectionProjects = self.projectsList[key] ?? []
-                let project = sectionProjects[indexPath.row]
                 let dispName = project.projectConfig?.displayName ?? "Project"
                 
                 self.presentConfirmationAlert(
@@ -309,7 +555,15 @@ import UIKit
                 }
             }
             
-            return UIMenu(children: [export, item])
+            var menuItems: [UIAction] = [export]
+            if self.canPickIcon(for: project) {
+                let changeIcon = UIAction(title: "Change Icon", image: UIImage(systemName: "photo")) { [weak self] _ in
+                    self?.presentIconPicker(for: project, at: indexPath)
+                }
+                menuItems.append(changeIcon)
+            }
+            menuItems.append(item)
+            return UIMenu(children: menuItems)
         }
     }
     
@@ -331,24 +585,39 @@ import UIKit
             
             let items = try FileManager.default.contentsOfDirectory(atPath: extractFirst.path).filter { !$0.hasPrefix("__") && !$0.hasPrefix(".") }
             
-            guard let firstItem = items.first else {
+            guard !items.isEmpty else {
                 try? FileManager.default.removeItem(at: extractFirst)
                 throw CocoaError(.fileReadNoSuchFile)
             }
             
             let projectPath = "\(NXBootstrap.shared().rootURL.appendingPathComponent("/Projects").path)/\(UUID().uuidString)"
             
-            do {
+            if items.contains("Config") {
+                // The root of extractFirst is the project itself
+                try FileManager.default.moveItem(atPath: extractFirst.path, toPath: projectPath)
+            } else if items.count == 1 {
                 try FileManager.default.moveItem(
-                    atPath: extractFirst.appendingPathComponent(firstItem).path,
+                    atPath: extractFirst.appendingPathComponent(items[0]).path,
                     toPath: projectPath
                 )
-            } catch {
                 try? FileManager.default.removeItem(at: extractFirst)
-                throw error
+            } else {
+                // Multiple folders, find the one containing Config/Project.plist
+                var foundFolder: String? = nil
+                for item in items {
+                    let subPath = extractFirst.appendingPathComponent(item).appendingPathComponent("Config/Project.plist").path
+                    if FileManager.default.fileExists(atPath: subPath) {
+                        foundFolder = item
+                        break
+                    }
+                }
+                let sourceToMove = foundFolder ?? items[0]
+                try FileManager.default.moveItem(
+                    atPath: extractFirst.appendingPathComponent(sourceToMove).path,
+                    toPath: projectPath
+                )
+                try? FileManager.default.removeItem(at: extractFirst)
             }
-            
-            try? FileManager.default.removeItem(at: extractFirst)
             
             if let project = NXProject(url: URL(fileURLWithPath: projectPath)) {
                 addProject(project)
