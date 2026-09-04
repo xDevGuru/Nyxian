@@ -193,7 +193,7 @@
     }
 
     NSMutableDictionary *appBundleInfo = [@{
-        @"CFBundleDisplayName": [NSString stringWithFormat:@"● %@", name],
+        @"CFBundleDisplayName": name,
         @"CFBundleExecutable": @"$(NXExecutable)",
         @"CFBundleIdentifier": @"$(NXBundleIdentifier)",
         @"CFBundleName": @"$(NXDisplayName)",
