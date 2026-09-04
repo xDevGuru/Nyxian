@@ -57,31 +57,35 @@ kern_return_t ksurface_keychain_update(void)
     }
     
     /* putting own key into the keychain (so resigning works on changed certificate) */
-    nxt2_vendor_key_t ksurface_vendor;
-    ksurface_vendor.vendor_name = strdup("ksurface.private");
-    if(ksurface_vendor.vendor_name == NULL)
+    if(ksurface != NULL && ksurface->pub_key != NULL && ksurface->pub_key_len > 0)
     {
-        os_unfair_lock_unlock(&g_keychain_lock);
-        return KERN_RESOURCE_SHORTAGE;
-    }
-    ksurface_vendor.public_key = malloc(ksurface->pub_key_len);
-    if(ksurface_vendor.public_key == NULL)
-    {
-        os_unfair_lock_unlock(&g_keychain_lock);
-        return KERN_RESOURCE_SHORTAGE;
-    }
-    ksurface_vendor.public_key_len = ksurface->pub_key_len;
-    memcpy(ksurface_vendor.public_key, ksurface->pub_key, ksurface->pub_key_len);
-    
-    NSData *ksurfaceKey = [NSData dataWithBytes:&ksurface_vendor length:sizeof(ksurface_vendor)];
-    if(ksurfaceKey)
-    {
-        [g_keychain addObject:ksurfaceKey];
-    }
-    else
-    {
-        free(ksurface_vendor.vendor_name);
-        free(ksurface_vendor.public_key);
+        nxt2_vendor_key_t ksurface_vendor;
+        ksurface_vendor.vendor_name = strdup("ksurface.private");
+        if(ksurface_vendor.vendor_name == NULL)
+        {
+            os_unfair_lock_unlock(&g_keychain_lock);
+            return KERN_RESOURCE_SHORTAGE;
+        }
+        ksurface_vendor.public_key = malloc(ksurface->pub_key_len);
+        if(ksurface_vendor.public_key == NULL)
+        {
+            free(ksurface_vendor.vendor_name);
+            os_unfair_lock_unlock(&g_keychain_lock);
+            return KERN_RESOURCE_SHORTAGE;
+        }
+        ksurface_vendor.public_key_len = ksurface->pub_key_len;
+        memcpy(ksurface_vendor.public_key, ksurface->pub_key, ksurface->pub_key_len);
+        
+        NSData *ksurfaceKey = [NSData dataWithBytes:&ksurface_vendor length:sizeof(ksurface_vendor)];
+        if(ksurfaceKey)
+        {
+            [g_keychain addObject:ksurfaceKey];
+        }
+        else
+        {
+            free(ksurface_vendor.vendor_name);
+            free(ksurface_vendor.public_key);
+        }
     }
     
     
