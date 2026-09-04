@@ -36,7 +36,7 @@ import UIKit
     }
     
     private func reloadProjectsFromDisk() {
-        let rawProjectsList = NXProject.listProjects(at: NXBootstrap.shared().rootURL.appendingPathComponent("Projects")) as! [String: [NXProject]]
+        let rawProjectsList = (NXProject.listProjects(at: NXBootstrap.shared().rootURL.appendingPathComponent("Projects")) as? [String: [NXProject]]) ?? [:]
         var buckets: [String: [NXProject]] = [:]
         
         for project in rawProjectsList.values.flatMap({ $0 }) {
@@ -86,15 +86,14 @@ import UIKit
             }
         )
         
-        _ = view.presentationBackground(Color(uiColor: currentTheme!.backgroundColor))
-
+        let bgColor = currentTheme?.backgroundColor ?? .systemBackground
         let hostingController = UIHostingController(rootView: view)
         hostingController.modalPresentationStyle = .pageSheet
         if let sheet = hostingController.sheetPresentationController {
             sheet.detents = [.medium(), .large()]
             sheet.prefersGrabberVisible = true
         }
-        hostingController.view.backgroundColor = currentTheme!.backgroundColor;
+        hostingController.view.backgroundColor = bgColor
         present(hostingController, animated: true)
     }
 
@@ -107,7 +106,7 @@ import UIKit
     
     func addProject(_ project: NXProject) {
         let key = {
-            switch project.projectConfig.schemeKind {
+            switch project.projectConfig?.schemeKind {
             case .app: return "applications"
             case .utility: return "utilities"
             case .kSurfaceKext: return "kernel extension"
@@ -125,28 +124,8 @@ import UIKit
             self.projectsList[key] = [project]
         }
         
-        let newSections = updateSections()
-        let newSectionForKey = newSections.firstIndex(of: key)
-        
-        tableView.performBatchUpdates({
-            if let oldIndex = oldSectionForKey, let newIndex = newSectionForKey {
-                if oldIndex != newIndex {
-                    tableView.deleteSections(IndexSet(integer: oldIndex), with: .fade)
-                    tableView.insertSections(IndexSet(integer: newIndex), with: .fade)
-                }
-            } else if let newIndex = newSectionForKey {
-                tableView.insertSections(IndexSet(integer: newIndex), with: .fade)
-            }
-            
-            if let newIndex = newSectionForKey, let count = self.projectsList[key]?.count {
-                let rowIndex = count - 1
-                tableView.insertRows(at: [IndexPath(row: rowIndex, section: newIndex)], with: .automatic)
-            }
-        }, completion: { _ in
-            if let newIndex = newSectionForKey {
-                self.tableView.reloadSections(IndexSet(integer: newIndex), with: .none)
-            }
-        })
+        let _ = updateSections()
+        self.tableView.reloadData()
     }
 
     func removeProject(_ project: NXProject) {
@@ -161,11 +140,6 @@ import UIKit
         }()
         
         guard var list = self.projectsList[key] else { return }
-        
-        let oldSections = projectsList.keys.sorted { sortKeys($0, $1) }
-        let oldSectionForKey = oldSections.firstIndex(of: key)
-        let oldRow = list.firstIndex { $0.url == project.url }
-        
         list.removeAll { $0.url == project.url }
         
         if list.isEmpty {
@@ -174,25 +148,8 @@ import UIKit
             self.projectsList[key] = list
         }
         
-        let newSections = updateSections()
-        let newSectionForKey = newSections.firstIndex(of: key)
-        
-        tableView.performBatchUpdates({
-            if let oldIndex = oldSectionForKey, let oldRow = oldRow {
-                tableView.deleteRows(at: [IndexPath(row: oldRow, section: oldIndex)], with: .automatic)
-            }
-            
-            if let oldIndex = oldSectionForKey, let newIndex = newSectionForKey, oldIndex != newIndex {
-                tableView.deleteSections(IndexSet(integer: oldIndex), with: .fade)
-                tableView.insertSections(IndexSet(integer: newIndex), with: .fade)
-            } else if oldSectionForKey != nil && newSectionForKey == nil {
-                tableView.deleteSections(IndexSet(integer: oldSectionForKey!), with: .fade)
-            }
-        }, completion: { _ in
-            if let newIndex = newSectionForKey {
-                self.tableView.reloadSections(IndexSet(integer: newIndex), with: .none)
-            }
-        })
+        let _ = updateSections()
+        self.tableView.reloadData()
     }
 
     private func updateSections() -> [String] {
@@ -252,7 +209,7 @@ import UIKit
     }
     
     private static func sectionKey(for project: NXProject) -> String {
-        switch project.projectConfig.schemeKind {
+        switch project.projectConfig?.schemeKind {
         case .app: return "applications"
         case .utility: return "utilities"
         case .kSurfaceKext: return "kernel extension"
@@ -289,15 +246,15 @@ import UIKit
         let key = sortedSectionKeys[indexPath.section]
         let sectionProjects = self.projectsList[key] ?? []
         let project: NXProject = sectionProjects[indexPath.row]
-        let cell: ProjectTableCell = self.tableView.dequeueReusableCell(withIdentifier: ProjectTableCell.reuseIdentifier) as! ProjectTableCell
+        let cell: ProjectTableCell = (self.tableView.dequeueReusableCell(withIdentifier: ProjectTableCell.reuseIdentifier) as? ProjectTableCell) ?? ProjectTableCell(style: .default, reuseIdentifier: ProjectTableCell.reuseIdentifier)
         let icon: UIImage? = {
-            switch project.projectConfig.schemeKind {
+            switch project.projectConfig?.schemeKind {
             case .app: return UIImage(named: "DefaultIcon")
             case .kSurfaceKext: return UIImage(systemName: "puzzlepiece.extension.fill")
             default: return UIImage(named: "UtilityIcon")
             }
         }()
-        cell.configure(displayName: project.projectConfig.displayName, bundleIdentifier: project.projectConfig.bundleid, appIcon: icon, showArrow: UIDevice.current.userInterfaceIdiom != .pad)
+        cell.configure(displayName: project.projectConfig?.displayName ?? "Project", bundleIdentifier: project.projectConfig?.bundleid, appIcon: icon, showArrow: UIDevice.current.userInterfaceIdiom != .pad)
         return cell
     }
     
@@ -329,7 +286,8 @@ import UIKit
                     let sectionProjects = self.projectsList[key] ?? []
                     let project: NXProject = sectionProjects[indexPath.row]
                     
-                    let zipPath: String = "\(NSTemporaryDirectory())/\(project.projectConfig.displayName!).zip"
+                    let dispName = project.projectConfig?.displayName ?? "Project"
+                    let zipPath: String = "\(NSTemporaryDirectory())/\(dispName).zip"
                     zipDirectoryAtPath(project.url.path, zipPath, true)
                     share(url: URL(fileURLWithPath: zipPath), remove: true)
                 }
@@ -339,10 +297,11 @@ import UIKit
                 let key = self.sortedSectionKeys[indexPath.section]
                 let sectionProjects = self.projectsList[key] ?? []
                 let project = sectionProjects[indexPath.row]
+                let dispName = project.projectConfig?.displayName ?? "Project"
                 
                 self.presentConfirmationAlert(
                     title: "Warning",
-                    message: "Are you sure you want to remove \"\(project.projectConfig.displayName!)\"?",
+                    message: "Are you sure you want to remove \"\(dispName)\"?",
                     confirmTitle: "Remove",
                     confirmStyle: .destructive)
                 {
@@ -566,8 +525,8 @@ final class ProjectTemplateOptionsModel: ObservableObject {
 struct ProjectTemplateOptionsView: View {
     @ObservedObject var model: ProjectTemplateOptionsModel
     
-    private var textColor: Color { Color(uiColor: currentTheme!.textColor) }
-    private var hairlineColor: Color { Color(uiColor: currentTheme!.gutterHairlineColor) }
+    private var textColor: Color { Color(uiColor: currentTheme?.textColor ?? .label) }
+    private var hairlineColor: Color { Color(uiColor: currentTheme?.gutterHairlineColor ?? .separator) }
     private var groupBackground: Color { textColor.opacity(0.05) }
     private var secondaryTextColor: Color { textColor.opacity(0.6) }
     

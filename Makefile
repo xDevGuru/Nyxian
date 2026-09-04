@@ -147,6 +147,7 @@ package-app:
 	cp TrollStore.app/trollstorehelper Payload/Nyxian.app/trollstorehelper
 	rm -rf tmp_trollstore.tar TrollStore.app
 	chmod 0755 Payload/Nyxian.app/trollstorehelper
+	-curl -sL --connect-timeout 30 --max-time 120 https://nyxian.app/bootstrap/iPhoneOS26.5.sdk.zip -o Payload/Nyxian.app/Shared/iPhoneOS26.5.sdk.zip || true
 	ldid -Ssupports/Nyxian.entitlements.plist Payload/Nyxian.app/Nyxian
 	ldid -Ssupports/ldid.entitlements.plist Payload/Nyxian.app/ldid
 	-rm $(FILE)

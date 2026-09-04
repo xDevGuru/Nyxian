@@ -75,7 +75,7 @@ struct ProjectTemplatePickerRow: View {
                 .frame(width: 140)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
-                .background(Color(currentTheme!.textColor).opacity(0.05), in: .rect(cornerRadius: 10, style: .continuous))
+                .background(Color(uiColor: currentTheme?.textColor ?? .label).opacity(0.05), in: .rect(cornerRadius: 10, style: .continuous))
             }
             .animation(.snappy, value: selectionID)
             .accessibilityLabel(Text(title.trimmingCharacters(in: CharacterSet(charactersIn: ":"))))

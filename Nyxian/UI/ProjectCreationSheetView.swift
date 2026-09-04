@@ -40,11 +40,15 @@ struct ProjectCreationSheetView: View {
         NXWindowServer.shared().unfocusFocusedWindow()
     }
     
+    private var textColor: Color { Color(uiColor: currentTheme?.textColor ?? .label) }
+    private var backgroundColor: Color { Color(uiColor: currentTheme?.backgroundColor ?? .systemBackground) }
+    private var hairlineColor: Color { Color(uiColor: currentTheme?.gutterHairlineColor ?? .separator) }
+    
     var body: some View {
         VStack(spacing: 0) {
             header
             Rectangle()
-                .fill(Color(uiColor: currentTheme!.gutterHairlineColor))
+                .fill(hairlineColor)
                 .frame(height: 1 / UIScreen.main.scale)
             ScrollView {
                 Group {
@@ -57,11 +61,11 @@ struct ProjectCreationSheetView: View {
                 .padding(.vertical, 16)
             }
             Rectangle()
-                .fill(Color(uiColor: currentTheme!.gutterHairlineColor))
+                .fill(hairlineColor)
                 .frame(height: 1 / UIScreen.main.scale)
             controls
         }
-        .background(Color(uiColor: currentTheme!.backgroundColor))
+        .background(backgroundColor)
         .onAppear {
             NXWindowServer.shared().windowsGetOutOfMyWay()
         }
@@ -78,7 +82,7 @@ struct ProjectCreationSheetView: View {
             .padding(.horizontal, 20)
             .padding(.top, 20)
             .padding(.bottom, 14)
-            .foregroundColor(Color(currentTheme!.textColor))
+            .foregroundColor(textColor)
     }
     
     private var controls: some View {
@@ -120,10 +124,10 @@ private struct ProjectCreationLegacyPrimaryButtonStyle: ButtonStyle {
             .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 18)
             .frame(minHeight: 44)
-            .foregroundStyle(Color(uiColor: currentTheme!.backgroundColor))
+            .foregroundStyle(Color(uiColor: currentTheme?.backgroundColor ?? .systemBackground))
             .background {
                 Capsule(style: .continuous)
-                    .fill(Color(uiColor: currentTheme!.textColor))
+                    .fill(Color(uiColor: currentTheme?.textColor ?? .label))
                     .opacity(buttonOpacity(isPressed: configuration.isPressed))
             }
     }
@@ -161,14 +165,14 @@ private struct ProjectCreationLegacySecondaryButtonStyle: ButtonStyle {
             .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 18)
             .frame(minHeight: 44)
-            .foregroundStyle(Color(uiColor: currentTheme!.textColor))
+            .foregroundStyle(Color(uiColor: currentTheme?.textColor ?? .label))
             .background {
                 Capsule(style: .continuous)
-                    .fill(Color(uiColor: currentTheme!.backgroundColor))
+                    .fill(Color(uiColor: currentTheme?.backgroundColor ?? .systemBackground))
                     .overlay {
                         Capsule(style: .continuous)
                             .strokeBorder(
-                                Color(uiColor: currentTheme!.gutterHairlineColor),
+                                Color(uiColor: currentTheme?.gutterHairlineColor ?? .separator),
                                 lineWidth: 1
                             )
                     }

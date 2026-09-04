@@ -31,9 +31,9 @@ struct ProjectTemplateSelectionView: View {
     
     @ObservedObject var model: ProjectTemplateOptionsModel
     
-    private var textColor: Color { Color(uiColor: currentTheme!.textColor) }
-    private var backgroundColor: Color { Color(uiColor: currentTheme!.backgroundColor) }
-    private var hairlineColor: Color { Color(uiColor: currentTheme!.gutterHairlineColor) }
+    private var textColor: Color { Color(uiColor: currentTheme?.textColor ?? .label) }
+    private var backgroundColor: Color { Color(uiColor: currentTheme?.backgroundColor ?? .systemBackground) }
+    private var hairlineColor: Color { Color(uiColor: currentTheme?.gutterHairlineColor ?? .separator) }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -70,8 +70,8 @@ struct ProjectTemplateSelectionView: View {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(isSelected ? textColor : textColor.opacity(0.08))
                     
-                    let base = UIImage(systemName: systemImage) ?? UIImage(privateSystemName: systemImage)
-                    let configuredBase: UIImage? = base!.applyingSymbolConfiguration(UIImage.SymbolConfiguration(pointSize: 22, weight: .semibold, scale: scale))
+                    let base = UIImage(systemName: systemImage) ?? UIImage(privateSystemName: systemImage) ?? UIImage(systemName: "app.fill")
+                    let configuredBase: UIImage? = base?.applyingSymbolConfiguration(UIImage.SymbolConfiguration(pointSize: 22, weight: .semibold, scale: scale))
                     let img = configuredBase?.withRenderingMode(.alwaysTemplate) ?? UIImage()
                     
                     Image(uiImage: img)
