@@ -22,6 +22,10 @@ This document maintains a complete, chronological record of all custom modificat
      3. Tapping **Run** -> Signs executable via bundled `ldid` -> Packages `.ipa` -> Automatically installs directly to iOS SpringBoard via TrollStore -> Automatically opens the app.
 3. **Future Upstream Sync Capability**:
    - When upstream releases new updates, all custom patches in this document can be quickly re-applied on top of the newly synced upstream main in a single clean commit.
+4. **Minimal, Surgical Interventions (Do NOT Blindly Copy SuSu's Fork)**:
+   - SuSuDear's `emexDE` is 760 commits behind upstream `Nyxian:main`.
+   - Never bulk-copy or mass-replace entire directories or obsolete files from `emexDE` into `Nyxian`.
+   - Only adapt the exact, specific logic needed (such as TrollStore signing & installation) to fit cleanly and minimally into the latest Nyxian codebase.
 
 ---
 
