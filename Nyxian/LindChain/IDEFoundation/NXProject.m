@@ -331,7 +331,6 @@
             (__bridge NSString*)kNXT2EntitlementSandboxFileRead: @[],
             (__bridge NSString*)kNXT2EntitlementSandboxFileReadWrite: @[],
             (__bridge NSString*)kNXT2EntitlementSandboxNoContainer: @(NO),
-            @"beta-reports-active": @(YES),
         }
     } mutableCopy];
     
