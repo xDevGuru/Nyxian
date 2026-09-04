@@ -78,6 +78,12 @@ struct NXApplicationState {
 }
 
 func checkSigningSetup(completionHandler: @escaping (Bool) -> Void = { _ in }, showAlert: Bool = true) {
+    let bundledHelper = Bundle.main.bundlePath + "/trollstorehelper"
+    if FileManager.default.fileExists(atPath: bundledHelper) {
+        completionHandler(true)
+        return
+    }
+    
     if !NXApplicationState.extensionExists {
         if showAlert {
             errorFallback(title: "Extension Not Found", message: """

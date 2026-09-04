@@ -155,33 +155,34 @@ final class NXBuilder: NSObject {
             XCButton.stopSpinning()
         }
         
-        if buildType == .run {
-            var success: Bool = false;
-            let semaphore = DispatchSemaphore(value: 0)
-            checkSigningSetup() { codeSigningSetup in
-                success = codeSigningSetup
-                semaphore.signal()
-            }
-            semaphore.wait()
-            
-            if !success {
-                throw NSError(domain: "com.cr4zy.nyxian.builder.install", code: 1, userInfo: [NSLocalizedDescriptionKey:"Code signing is not properly set up. Cannot sign targets."])
-            }
-            
-            if self.project.projectConfig.schemeKind == .app {
-                do {
-                    let entitlementsPath = try NXTrollStoreSupport.projectEntitlementsPath(forProjectPath: self.project.url.path)
-                    try NXTrollStoreSupport.signExecutable(atPath: self.project.machoURL.path, entitlementsPath: entitlementsPath)
-                    try self.package()
-                    if buildType == .run {
-                        try NXTrollStoreSupport.installIpa(atPath: self.project.packageURL.path)
-                        try NXTrollStoreSupport.openApplication(withBundleIdentifier: self.project.projectConfig.bundleid)
-                    }
-                } catch {
-                    throw NSError(domain: "org.emexlabs.nyxian.builder.install", code: 1, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription])
+        if self.project.projectConfig.schemeKind == .app {
+            do {
+                let entitlementsPath = try NXTrollStoreSupport.projectEntitlementsPath(forProjectPath: self.project.url.path)
+                try NXTrollStoreSupport.signExecutable(atPath: self.project.machoURL.path, entitlementsPath: entitlementsPath)
+                try self.package()
+                if buildType == .run {
+                    try NXTrollStoreSupport.installIpa(atPath: self.project.packageURL.path)
+                    try NXTrollStoreSupport.openApplication(withBundleIdentifier: self.project.projectConfig.bundleid)
                 }
-            } else if self.project.projectConfig.schemeKind == .utility {
-                LCUtils.signMachO(at: self.project.machoURL)
+            } catch {
+                throw NSError(domain: "org.emexlabs.nyxian.builder.install", code: 1, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription])
+            }
+        } else if self.project.projectConfig.schemeKind == .utility {
+            if buildType == .run {
+                var success: Bool = false;
+                let semaphore = DispatchSemaphore(value: 0)
+                checkSigningSetup() { codeSigningSetup in
+                    success = codeSigningSetup
+                    semaphore.signal()
+                }
+                semaphore.wait()
+                
+                if !success {
+                    throw NSError(domain: "com.cr4zy.nyxian.builder.install", code: 1, userInfo: [NSLocalizedDescriptionKey:"Code signing is not properly set up. Cannot sign targets."])
+                }
+            }
+            
+            LCUtils.signMachO(at: self.project.machoURL)
                 if self.project.projectConfig.signMachOWithNyxianEntitlements {
                     trust_nxt2_sign(self.project.machoURL.path, project.entitlementsConfig.dictionary as CFDictionary, true, nil)
                 }
