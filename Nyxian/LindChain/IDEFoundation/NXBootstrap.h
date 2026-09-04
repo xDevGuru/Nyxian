@@ -41,6 +41,7 @@
 
 @property (atomic, readonly) UInt64 version;
 @property (atomic, readonly) BOOL isInstalled;
+@property (atomic, readonly) BOOL hasFailed;
 
 - (instancetype _Nonnull)init;
 + (instancetype _Nonnull)shared;

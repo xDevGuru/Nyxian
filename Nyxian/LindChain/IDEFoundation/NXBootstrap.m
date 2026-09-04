@@ -47,6 +47,7 @@ BOOL PEURLIsContainedIn(NSURL *candidate,
 @interface NXBootstrap ()
 
 @property (readwrite) UInt64 version;
+@property (readwrite) BOOL hasFailed;
 
 @end
 
@@ -74,7 +75,13 @@ BOOL PEURLIsContainedIn(NSURL *candidate,
 - (NSURL*)rootURL
 {
     dispatch_once(&_gatherRootURLOnce, ^{
-        _rootURL = [NSURL fileURLWithPath:[[@"/private" stringByAppendingPathComponent:NSHomeDirectory()] stringByAppendingPathComponent:@"Documents"]];
+        NSString *home = NSHomeDirectory();
+        NSString *docs = [home stringByAppendingPathComponent:@"Documents"];
+        if(![docs hasPrefix:@"/private"] && [[NSFileManager defaultManager] fileExistsAtPath:[@"/private" stringByAppendingPathComponent:docs]])
+        {
+            docs = [@"/private" stringByAppendingPathComponent:docs];
+        }
+        _rootURL = [NSURL fileURLWithPath:docs];
     });
     return _rootURL;
 }
@@ -162,14 +169,14 @@ BOOL PEURLIsContainedIn(NSURL *candidate,
         
     report_error:
         {
-            NSLog(@"bootstrapping sadly failed :c");
+            NSLog(@"bootstrapping sadly failed :c (%@)", error.localizedDescription);
+            self.hasFailed = YES;
             [NotificationServer NotifyUserWithLevel:NotifLevelError notification:[NSString stringWithFormat:@"Bootstrapping failed: %@", error.localizedDescription] delay:1.0];
-            self.version = 0;
-            [self clearURL:self.rootURL];
             return;
         }
         
     skip_error_report:
+        self.hasFailed = NO;
         
         /*
          * checking weither we have to create the
@@ -214,9 +221,9 @@ BOOL PEURLIsContainedIn(NSURL *candidate,
                  */
                 NSLog(@"bootstrapping directory structure");
                 
-                [[NSFileManager defaultManager] createDirectoryAtURL:self.projectsURL withIntermediateDirectories:NO attributes:nil error:&error];
+                [[NSFileManager defaultManager] createDirectoryAtURL:self.projectsURL withIntermediateDirectories:YES attributes:nil error:&error];
                 
-                if(![[NSFileManager defaultManager] createDirectoryAtURL:self.cacheURL withIntermediateDirectories:NO attributes:nil error:&error])
+                if(![[NSFileManager defaultManager] createDirectoryAtURL:self.cacheURL withIntermediateDirectories:YES attributes:nil error:&error])
                 {
                     goto report_error;
                 }
@@ -322,16 +329,37 @@ BOOL PEURLIsContainedIn(NSURL *candidate,
                 [[NSFileManager defaultManager] removeItemAtURL:[self.rootURL URLByAppendingPathComponent:@"SDK"] error:nil];
                 [[NSFileManager defaultManager] removeItemAtURL:self.swiftModuleCacheURL error:nil];    /* clearing module cache */
                 
-                if(!fdownload(@"https://nyxian.app/bootstrap/iPhoneOS26.5.sdk.zip", @"sdk.zip"))
+                NSString *sdkZipTemp = [NSTemporaryDirectory() stringByAppendingPathComponent:@"sdk.zip"];
+                [[NSFileManager defaultManager] removeItemAtPath:sdkZipTemp error:nil];
+                
+                NSURL *bundledSDK = [NSBundle.mainBundle.bundleURL URLByAppendingPathComponent:@"Shared/iPhoneOS26.5.sdk.zip"];
+                NSString *sdkSourceZip = nil;
+                if([[NSFileManager defaultManager] fileExistsAtPath:bundledSDK.path])
                 {
-                    error = [NSError errorWithDomain:@"" code:0 userInfo:@{ NSLocalizedDescriptionKey: @"downloading \"https://nyxian.app/bootstrap/iPhoneOS26.5.sdk.zip\" failed" }];
-                    goto report_error;
+                    sdkSourceZip = bundledSDK.path;
+                }
+                else
+                {
+                    if(!fdownload(@"https://nyxian.app/bootstrap/iPhoneOS26.5.sdk.zip", sdkZipTemp))
+                    {
+                        error = [NSError errorWithDomain:@"" code:0 userInfo:@{ NSLocalizedDescriptionKey: @"downloading \"https://nyxian.app/bootstrap/iPhoneOS26.5.sdk.zip\" failed" }];
+                        goto report_error;
+                    }
+                    sdkSourceZip = sdkZipTemp;
                 }
                 
-                if(!unzipArchiveAtPath([NSTemporaryDirectory() stringByAppendingPathComponent:@"sdk.zip"], [self.rootURL URLByAppendingPathComponent:@"SDK"].path))
+                NSString *sdkDestDir = [self.rootURL URLByAppendingPathComponent:@"SDK"].path;
+                [[NSFileManager defaultManager] createDirectoryAtPath:sdkDestDir withIntermediateDirectories:YES attributes:nil error:nil];
+                
+                if(!unzipArchiveAtPath(sdkSourceZip, sdkDestDir))
                 {
                     error = [NSError errorWithDomain:@"" code:0 userInfo:@{ NSLocalizedDescriptionKey: @"extracting \"sdk.zip\" failed" }];
                     goto report_error;
+                }
+                
+                if([sdkSourceZip isEqualToString:sdkZipTemp])
+                {
+                    [[NSFileManager defaultManager] removeItemAtPath:sdkZipTemp error:nil];
                 }
                 
                 NSArray<NSURL*> *symlinkSDKs = @[
@@ -342,6 +370,7 @@ BOOL PEURLIsContainedIn(NSURL *candidate,
                 
                 for(NSURL *symlink in symlinkSDKs)
                 {
+                    [[NSFileManager defaultManager] removeItemAtPath:symlink.path error:nil];
                     if(![[NSFileManager defaultManager] createSymbolicLinkAtPath:symlink.path withDestinationPath:self.sdkURL.lastPathComponent error:&error])
                     {
                         goto report_error;
@@ -355,18 +384,33 @@ BOOL PEURLIsContainedIn(NSURL *candidate,
             {
                 NSLog(@"bootstrapping rootca folder");
                 
-                [[NSFileManager defaultManager] createDirectoryAtURL:[self.rootURL URLByAppendingPathComponent:@"RootCAs"] withIntermediateDirectories:true attributes:nil error:nil];
+                NSURL *rootCADir = [self.rootURL URLByAppendingPathComponent:@"RootCAs"];
+                [[NSFileManager defaultManager] createDirectoryAtURL:rootCADir withIntermediateDirectories:YES attributes:nil error:nil];
                 
-                if(!fdownload(@"https://nyxian.app/bootstrap/org.emexlabs.rootca.v1.pub.nxt2c", @"org.emexlabs.rootca.v1.pub.nxt2c"))
+                NSString *rootCADestPath = [rootCADir URLByAppendingPathComponent:@"org.emexlabs.rootca.v1.pub.nxt2c"].path;
+                NSURL *bundledRootCA = [NSBundle.mainBundle.bundleURL URLByAppendingPathComponent:@"Shared/org.emexlabs.rootca.v1.pub.nxt2c"];
+                
+                BOOL installedRootCA = NO;
+                if([[NSFileManager defaultManager] fileExistsAtPath:bundledRootCA.path])
                 {
-                    error = [NSError errorWithDomain:@"" code:0 userInfo:@{ NSLocalizedDescriptionKey: @"downloading \"https://nyxian.app/bootstrap/org.emexlabs.rootca.v1.pub.nxt2c\" failed" }];
-                    goto report_error;
+                    [[NSFileManager defaultManager] removeItemAtPath:rootCADestPath error:nil];
+                    if([[NSFileManager defaultManager] copyItemAtPath:bundledRootCA.path toPath:rootCADestPath error:nil])
+                    {
+                        installedRootCA = YES;
+                        NSLog(@"[NXBootstrap] installed rootca from bundle");
+                    }
                 }
                 
-                if(![[NSFileManager defaultManager] moveItemAtPath:[NSTemporaryDirectory() stringByAppendingPathComponent:@"org.emexlabs.rootca.v1.pub.nxt2c"] toPath:[[self.rootURL URLByAppendingPathComponent:@"RootCAs/org.emexlabs.rootca.v1.pub.nxt2c"] path] error:nil])
+                if(!installedRootCA)
                 {
-                    error = [NSError errorWithDomain:@"" code:0 userInfo:@{ NSLocalizedDescriptionKey: @"failed to move emexlabs public rootca key" }];
-                    goto report_error;
+                    [[NSFileManager defaultManager] removeItemAtPath:rootCADestPath error:nil];
+                    if(!fdownload(@"https://nyxian.app/bootstrap/org.emexlabs.rootca.v1.pub.nxt2c", rootCADestPath))
+                    {
+                        error = [NSError errorWithDomain:@"" code:0 userInfo:@{ NSLocalizedDescriptionKey: @"downloading \"https://nyxian.app/bootstrap/org.emexlabs.rootca.v1.pub.nxt2c\" failed" }];
+                        goto report_error;
+                    }
+                    installedRootCA = YES;
+                    NSLog(@"[NXBootstrap] downloaded and installed rootca");
                 }
                 
                 ksurface_keychain_update();
@@ -420,9 +464,9 @@ BOOL PEURLIsContainedIn(NSURL *candidate,
     [XCButton switchImageWithSystemName:@"archivebox.fill" animated:YES];
     [XCButton updateProgressWithValue:0.1];
     
-    while(self.version != NXBOOTSTRAP_NEWEST_VERSION)
+    while(self.version != NXBOOTSTRAP_NEWEST_VERSION && !self.hasFailed)
     {
-        relax();
+        usleep(100000); // 100ms sleep prevents 100% CPU lockup and watchdog crash
     }
     
     [XCButton switchImageWithSystemName:@"hammer.fill" animated:YES];

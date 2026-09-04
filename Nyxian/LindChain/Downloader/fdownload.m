@@ -26,17 +26,32 @@ BOOL fdownload(NSString *urlString,
 {
     // Prepare to download
     NSURL *url = [NSURL URLWithString:urlString];
-    NSURLSession *session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration defaultSessionConfiguration] delegate:nil delegateQueue:nil];
+    NSURLSessionConfiguration *config = [NSURLSessionConfiguration defaultSessionConfiguration];
+    config.timeoutIntervalForRequest = 60.0;
+    config.timeoutIntervalForResource = 600.0;
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:config delegate:nil delegateQueue:nil];
     
     // The part where we download a file lol
     __block BOOL didDownload = NO;
     dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
     NSURLSessionDownloadTask *downloadTask = [session downloadTaskWithURL:url completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
         // Check if download was successful and if not we signal and we exit
-        if(error)
+        if(error || !location)
         {
+            NSLog(@"[fdownload] Download error for %@: %@", urlString, error.localizedDescription);
             dispatch_semaphore_signal(semaphore);
             return;
+        }
+
+        if([response isKindOfClass:[NSHTTPURLResponse class]])
+        {
+            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
+            if(httpResponse.statusCode < 200 || httpResponse.statusCode >= 300)
+            {
+                NSLog(@"[fdownload] HTTP error %ld for %@", (long)httpResponse.statusCode, urlString);
+                dispatch_semaphore_signal(semaphore);
+                return;
+            }
         }
 
         // Determine the destination path
@@ -44,12 +59,21 @@ BOOL fdownload(NSString *urlString,
         if (![finalDestinationPath isAbsolutePath])
             finalDestinationPath = [NSTemporaryDirectory() stringByAppendingPathComponent:destinationPath];
 
+        // Ensure parent directory exists
+        NSString *parentDir = [finalDestinationPath stringByDeletingLastPathComponent];
+        [[NSFileManager defaultManager] createDirectoryAtPath:parentDir withIntermediateDirectories:YES attributes:nil error:NULL];
+
         // Check if destination file already exists and remove it if it does
         if ([[NSFileManager defaultManager] fileExistsAtPath:finalDestinationPath])
             [[NSFileManager defaultManager] removeItemAtPath:finalDestinationPath error:NULL];
         
         // Move it to its destination in case it suceeds means that the file was sucessfully downloaded
-        didDownload = [[NSFileManager defaultManager] moveItemAtURL:location toURL:[NSURL fileURLWithPath:finalDestinationPath] error:NULL];
+        NSError *moveError = nil;
+        didDownload = [[NSFileManager defaultManager] moveItemAtURL:location toURL:[NSURL fileURLWithPath:finalDestinationPath] error:&moveError];
+        if(!didDownload)
+        {
+            NSLog(@"[fdownload] Failed to move downloaded file to %@: %@", finalDestinationPath, moveError.localizedDescription);
+        }
 
         dispatch_semaphore_signal(semaphore);
     }];
