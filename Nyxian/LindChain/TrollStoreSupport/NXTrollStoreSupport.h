@@ -9,6 +9,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (BOOL)installIpaAtPath:(NSString *)ipaPath error:(NSError **)error;
 + (BOOL)installAppBundleAtPath:(NSString *)bundlePath error:(NSError **)error;
 + (BOOL)openApplicationWithBundleIdentifier:(NSString *)bundleIdentifier error:(NSError **)error;
++ (NSString *)preferredLdidPath;
 
 @end
 

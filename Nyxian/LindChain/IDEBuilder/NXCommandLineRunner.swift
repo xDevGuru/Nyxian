@@ -17,7 +17,7 @@ import MobileDevelopmentKit
             let sdkExists = FileManager.default.fileExists(atPath: NXBootstrap.shared().sdkURL.path)
             let ldidPath = NXTrollStoreSupport.preferredLdidPath()
             let ldidExists = FileManager.default.fileExists(atPath: ldidPath)
-            let projectsCount = (try? FileManager.default.contentsOfDirectory(at: NXBootstrap.shared().projectsURL, includingPropertiesForKeys: nil))?.count ?? 0
+            let projectsCount = (try? FileManager.default.contentsOfDirectory(atPath: NXBootstrap.shared().projectsURL.path))?.count ?? 0
             
             print("{\"status\":\"ok\",\"bootstrap_version\":\(ver),\"sdk_present\":\(sdkExists),\"ldid_present\":\(ldidExists),\"projects_count\":\(projectsCount),\"ldid_path\":\"\(ldidPath)\"}")
             return 0
