@@ -10,13 +10,17 @@ import UIKit
 
 // Headless CLI interceptor
 for (idx, arg) in CommandLine.arguments.enumerated() {
-    if arg == "--build" {
+    if arg == "--build" || arg == "--check" || arg == "--clean" || arg == "--doctor" || arg == "--info" {
         let exitCode = NXCommandLineRunner.run(arguments: CommandLine.arguments)
         exit(exitCode)
     }
     if arg == "--help" || arg == "-h" {
         print("Nyxian iOS IDE CLI")
-        print("Usage: Nyxian --build <project_path>")
+        print("Usage:")
+        print("  Nyxian --build <project_path>     Compile, sign, and install project")
+        print("  Nyxian --check <project_path>     Fast syntax & typecheck without install")
+        print("  Nyxian --clean <project_path>     Purge intermediate project build cache")
+        print("  Nyxian --doctor                   Report toolchain & system health (JSON)")
         exit(0)
     }
 }
