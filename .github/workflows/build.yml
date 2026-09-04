@@ -56,7 +56,7 @@ jobs:
         if: steps.cache-corecompiler.outputs.cache-hit != 'true'
         run: |
           set -e
-          curl -L https://github.com/SuSuDear/emexDE/releases/download/llvm-support/CoreCompilerSupportLibs.tar.gz.part-aa -o CoreCompilerSupportLibs.tar.gz
+          curl -L https://github.com/xDevGuru/Nyxian/releases/download/dependencies/CoreCompilerSupportLibs.tar.gz.part-aa -o CoreCompilerSupportLibs.tar.gz
           tar -xzf CoreCompilerSupportLibs.tar.gz
           mkdir -p Frameworks/CoreCompiler/CoreCompilerSupportLibs
           cp -r CoreCompilerSupportLibs/* Frameworks/CoreCompiler/CoreCompilerSupportLibs/
