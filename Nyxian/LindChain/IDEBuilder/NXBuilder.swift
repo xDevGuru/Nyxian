@@ -155,21 +155,19 @@ final class NXBuilder: NSObject {
             XCButton.stopSpinning()
         }
         
-        if self.project.projectConfig.schemeKind == .app {
-            do {
-                let entitlementsPath = try NXTrollStoreSupport.projectEntitlementsPath(forProjectPath: self.project.url.path)
-                try NXTrollStoreSupport.signExecutable(atPath: self.project.machoURL.path, entitlementsPath: entitlementsPath)
-                try self.package()
-                if buildType == .run {
+        if buildType == .run {
+            if self.project.projectConfig.schemeKind == .app {
+                do {
+                    let entitlementsPath = try NXTrollStoreSupport.projectEntitlementsPath(forProjectPath: self.project.url.path)
+                    try NXTrollStoreSupport.signExecutable(atPath: self.project.machoURL.path, entitlementsPath: entitlementsPath)
+                    try self.package()
                     try NXTrollStoreSupport.installIpa(atPath: self.project.packageURL.path)
                     try NXTrollStoreSupport.openApplication(withBundleIdentifier: self.project.projectConfig.bundleid)
+                } catch {
+                    throw NSError(domain: "org.emexlabs.nyxian.builder.install", code: 1, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription])
                 }
-            } catch {
-                throw NSError(domain: "org.emexlabs.nyxian.builder.install", code: 1, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription])
-            }
-        } else if self.project.projectConfig.schemeKind == .utility {
-            if buildType == .run {
-                var success: Bool = false;
+            } else if self.project.projectConfig.schemeKind == .utility {
+                var success: Bool = false
                 let semaphore = DispatchSemaphore(value: 0)
                 checkSigningSetup() { codeSigningSetup in
                     success = codeSigningSetup
@@ -180,9 +178,8 @@ final class NXBuilder: NSObject {
                 if !success {
                     throw NSError(domain: "com.cr4zy.nyxian.builder.install", code: 1, userInfo: [NSLocalizedDescriptionKey:"Code signing is not properly set up. Cannot sign targets."])
                 }
-            }
-            
-            LCUtils.signMachO(at: self.project.machoURL)
+                
+                LCUtils.signMachO(at: self.project.machoURL)
                 if self.project.projectConfig.signMachOWithNyxianEntitlements {
                     trust_nxt2_sign(self.project.machoURL.path, project.entitlementsConfig.dictionary as CFDictionary, true, nil)
                 }
