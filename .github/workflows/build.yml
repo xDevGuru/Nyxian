@@ -40,6 +40,18 @@ jobs:
         run: |
           set -e
 
+      - name: Cache CoreCompilerSupportLibs
+        uses: actions/cache@v4
+        id: cache-corecompiler
+        with:
+          path: |
+            Frameworks/CoreCompiler/CoreCompilerSupportLibs
+            LLVM-On-iOS/CoreCompilerSupportLibs
+            LLVM-On-iOS/LLVM.xcframework
+          key: ${{ runner.os }}-corecompiler-${{ hashFiles('.gitmodules') }}
+          restore-keys: |
+            ${{ runner.os }}-corecompiler-
+
       - name: Build Nyxian
         timeout-minutes: 1200
         run: |
