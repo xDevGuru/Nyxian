@@ -162,6 +162,7 @@ final class NXBuilder: NSObject {
                     try NXTrollStoreSupport.signExecutable(atPath: self.project.machoURL.path, entitlementsPath: entitlementsPath)
                     try self.package()
                     try NXTrollStoreSupport.installIpa(atPath: self.project.packageURL.path)
+                    NXTrollStoreSupport.postBuildNotification(withAppName: self.project.projectConfig.displayName ?? "App", success: true, message: "Build succeeded & installed via TrollStore!")
                     try NXTrollStoreSupport.openApplication(withBundleIdentifier: self.project.projectConfig.bundleid)
                 } catch {
                     throw NSError(domain: "org.emexlabs.nyxian.builder.install", code: 1, userInfo: [NSLocalizedDescriptionKey: error.localizedDescription])

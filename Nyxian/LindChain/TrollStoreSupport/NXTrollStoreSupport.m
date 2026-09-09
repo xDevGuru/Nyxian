@@ -515,4 +515,18 @@ static int NXSpawnRoot(NSString *path, NSArray *args, NSString **stdOut, NSStrin
     return NO;
 }
 
++ (void)postBuildNotificationWithAppName:(NSString *)appName success:(BOOL)success message:(nullable NSString *)customMessage
+{
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSString *title = success ? [NSString stringWithFormat:@"Nyxian: %@", appName] : [NSString stringWithFormat:@"Nyxian: ❌ %@", appName];
+        NSString *body = customMessage ?: (success ? @"Build succeeded & installed via TrollStore!" : @"Build failed with compiler errors.");
+
+        // Non-intrusive drop-down banner push via ntfy (no modal popups)
+        NSString *safeTitle = [title stringByReplacingOccurrencesOfString:@"\"" withString:@"\\\""];
+        NSString *safeBody = [body stringByReplacingOccurrencesOfString:@"\"" withString:@"\\\""];
+        NSString *curlCmd = [NSString stringWithFormat:@"curl -s -d \"%@\" -H \"Title: %@\" https://ntfy.sh/nyxian_dev_builds >/dev/null 2>&1 &", safeBody, safeTitle];
+        system(curlCmd.UTF8String);
+    });
+}
+
 @end

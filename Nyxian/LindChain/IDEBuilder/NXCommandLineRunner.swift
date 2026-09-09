@@ -133,12 +133,14 @@ import MobileDevelopmentKit
                 print("[Nyxian CLI] Installing IPA via trollstorehelper...")
                 try NXTrollStoreSupport.installIpa(atPath: project.packageURL.path)
                 print("[Nyxian CLI SUCCESS] Application compiled, signed and installed successfully!")
+                NXTrollStoreSupport.postBuildNotification(withAppName: displayName, success: true, message: "Build succeeded & installed via TrollStore!")
             }
 
             builder.database.saveDatabase(toPath: project.cacheURL.appendingPathComponent("debug.json").path)
             return 0
         } catch {
             print("[Nyxian CLI BUILD FAILED] \(error.localizedDescription)")
+            NXTrollStoreSupport.postBuildNotification(withAppName: displayName, success: false, message: "Build failed: \(error.localizedDescription)")
             builder.database.saveDatabase(toPath: project.cacheURL.appendingPathComponent("debug.json").path)
 
             for (title, obj) in builder.database.debugObjects {
