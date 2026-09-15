@@ -8,6 +8,7 @@
 	
 	UIWindowScene *windowScene = (UIWindowScene *)scene;
 	self.window = [[UIWindow alloc] initWithWindowScene:windowScene];
+	self.window.backgroundColor = [UIColor systemBackgroundColor];
 	
 	ViewController *vc = [[ViewController alloc] init];
 	

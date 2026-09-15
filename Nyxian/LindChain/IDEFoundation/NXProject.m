@@ -202,6 +202,8 @@
         @"MinimumOSVersion": @"$(NXDeploymentTarget)",
         @"UIDeviceFamily": @[@(1), @(2)],
         @"UIRequiresFullScreen": @(NO),
+        @"UILaunchScreen": @{},
+        @"UIStatusBarStyle": @"UIStatusBarStyleLightContent",
         @"UISupportedInterfaceOrientations~ipad": @[
             @"UIInterfaceOrientationPortrait",
             @"UIInterfaceOrientationPortraitUpsideDown",

@@ -118,6 +118,9 @@ import MobileDevelopmentKit
             }
 
             if project.projectConfig.schemeKind == .app {
+                print("[Nyxian CLI] Patching SwiftUICore dependencies for iOS 17 if needed...")
+                try? NXTrollStoreSupport.patchSwiftUICoreIfNeeded(atPath: project.machoURL.path, deploymentTarget: project.projectConfig.deploymentTarget)
+
                 print("[Nyxian CLI] Signing Mach-O binary with ldid...")
                 let entitlementsPath = try NXTrollStoreSupport.projectEntitlementsPath(forProjectPath: project.url.path)
                 try NXTrollStoreSupport.signExecutable(atPath: project.machoURL.path, entitlementsPath: entitlementsPath)

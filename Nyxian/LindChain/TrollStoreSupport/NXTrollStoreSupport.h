@@ -10,6 +10,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (BOOL)installAppBundleAtPath:(NSString *)bundlePath error:(NSError **)error;
 + (BOOL)openApplicationWithBundleIdentifier:(NSString *)bundleIdentifier error:(NSError **)error;
 + (NSString *)preferredLdidPath;
++ (BOOL)patchSwiftUICoreIfNeededAtPath:(NSString *)executablePath deploymentTarget:(nullable NSString *)deploymentTarget error:(NSError **)error;
 + (void)postBuildNotificationWithAppName:(NSString *)appName success:(BOOL)success message:(nullable NSString *)customMessage;
 
 @end

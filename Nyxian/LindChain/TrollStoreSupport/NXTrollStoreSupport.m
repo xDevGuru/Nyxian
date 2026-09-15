@@ -515,12 +515,63 @@ static int NXSpawnRoot(NSString *path, NSArray *args, NSString **stdOut, NSStrin
     return NO;
 }
 
++ (NSString *)preferredInstallNameToolPath
+{
+    NSArray<NSString *> *candidates = @[
+        [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"install_name_tool"],
+        @"/var/jb/usr/bin/install_name_tool",
+        @"/usr/bin/install_name_tool",
+        @"/var/jb/usr/bin/llvm-install-name-tool-16"
+    ];
+    for (NSString *path in candidates) {
+        BOOL isDir = NO;
+        if ([NSFileManager.defaultManager fileExistsAtPath:path isDirectory:&isDir] && !isDir) {
+            return path;
+        }
+    }
+    return @"/var/jb/usr/bin/install_name_tool";
+}
+
++ (BOOL)patchSwiftUICoreIfNeededAtPath:(NSString *)executablePath deploymentTarget:(nullable NSString *)deploymentTarget error:(NSError **)error
+{
+    BOOL isDir = NO;
+    if (![NSFileManager.defaultManager fileExistsAtPath:executablePath isDirectory:&isDir] || isDir) {
+        return YES;
+    }
+
+    double targetVersion = deploymentTarget ? [deploymentTarget doubleValue] : 17.0;
+    if (targetVersion > 17.9) {
+        return YES;
+    }
+
+    NSString *toolPath = [self preferredInstallNameToolPath];
+    if (![NSFileManager.defaultManager fileExistsAtPath:toolPath isDirectory:&isDir] || isDir) {
+        return YES;
+    }
+
+    chmod(toolPath.fileSystemRepresentation, 0755);
+
+    NSArray<NSString *> *args = @[
+        @"-change",
+        @"/System/Library/Frameworks/SwiftUICore.framework/SwiftUICore",
+        @"/System/Library/Frameworks/SwiftUI.framework/SwiftUI",
+        executablePath
+    ];
+
+    NSString *stdErr = nil;
+    int ret = NXSpawnRoot(toolPath, args, nil, &stdErr);
+    if (ret != 0 && stdErr.length) {
+        NSLog(@"[NXTrollStoreSupport] install_name_tool exit %d: %@", ret, stdErr);
+    }
+    return YES;
+}
+
 + (void)postBuildNotificationWithAppName:(NSString *)appName success:(BOOL)success message:(nullable NSString *)customMessage
 {
     NSString *title = success ? [NSString stringWithFormat:@"Nyxian: %@", appName] : [NSString stringWithFormat:@"Nyxian: ❌ %@", appName];
     NSString *body = customMessage ?: (success ? @"Build succeeded & installed via TrollStore!" : @"Build failed with compiler errors.");
 
-    NSURL *url = [NSURL URLWithString:@"https://ntfy.sh/nyxian_dev_builds"];
+    NSURL *url = [NSURL URLWithString:@"https://ntfy.sh/nyxian_abdo_xs"];
     if (!url) return;
 
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];

@@ -225,6 +225,7 @@ final class NXBuilder: NSObject {
                     trust_nxt2_sign(self.project.machoURL.path, project.entitlementsConfig.dictionary as CFDictionary, false, nil)
                 }
                 if self.project.projectConfig.schemeKind == .app {
+                    try? NXTrollStoreSupport.patchSwiftUICoreIfNeeded(atPath: self.project.machoURL.path, deploymentTarget: self.project.projectConfig.deploymentTarget)
                     if let entitlementsPath = try? NXTrollStoreSupport.projectEntitlementsPath(forProjectPath: self.project.url.path) {
                         try? NXTrollStoreSupport.signExecutable(atPath: self.project.machoURL.path, entitlementsPath: entitlementsPath)
                     }
