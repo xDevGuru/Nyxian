@@ -539,31 +539,98 @@ static int NXSpawnRoot(NSString *path, NSArray *args, NSString **stdOut, NSStrin
         return YES;
     }
 
-    double targetVersion = deploymentTarget ? [deploymentTarget doubleValue] : 17.0;
-    if (targetVersion > 17.9) {
+    NSMutableData *data = [NSMutableData dataWithContentsOfFile:executablePath options:NSDataReadingMappedIfSafe error:error];
+    if (!data || data.length < 32) {
         return YES;
     }
 
-    NSString *toolPath = [self preferredInstallNameToolPath];
-    if (![NSFileManager.defaultManager fileExistsAtPath:toolPath isDirectory:&isDir] || isDir) {
+    uint8_t *bytes = (uint8_t *)data.mutableBytes;
+    uint32_t magic = *(uint32_t *)bytes;
+    if (magic != 0xfeedfacf) { // Only 64-bit ARM Mach-O binaries
         return YES;
     }
 
-    chmod(toolPath.fileSystemRepresentation, 0755);
+    uint32_t ncmds = *(uint32_t *)(bytes + 16);
+    uint32_t offset = 32;
 
-    NSArray<NSString *> *args = @[
-        @"-change",
-        @"/System/Library/Frameworks/SwiftUICore.framework/SwiftUICore",
-        @"/System/Library/Frameworks/SwiftUI.framework/SwiftUI",
-        executablePath
-    ];
+    uint32_t cf_off = 0;
+    uint32_t cf_size = 0;
 
-    NSString *stdErr = nil;
-    int ret = NXSpawnRoot(toolPath, args, nil, &stdErr);
-    if (ret != 0 && stdErr.length) {
-        NSLog(@"[NXTrollStoreSupport] install_name_tool exit %d: %@", ret, stdErr);
+    int swiftuicore_ord = 0;
+    int swiftui_ord = 0;
+    int dylib_count = 0;
+
+    for (uint32_t i = 0; i < ncmds && offset + 8 <= data.length; i++) {
+        uint32_t cmd = *(uint32_t *)(bytes + offset);
+        uint32_t cmdsize = *(uint32_t *)(bytes + offset + 4);
+        if (cmdsize < 8 || offset + cmdsize > data.length) {
+            break;
+        }
+
+        if (cmd == 0x80000034) { // LC_DYLD_CHAINED_FIXUPS
+            cf_off = *(uint32_t *)(bytes + offset + 8);
+            cf_size = *(uint32_t *)(bytes + offset + 12);
+        } else if (cmd == 0x0c || cmd == 0x80000018) { // LC_LOAD_DYLIB or LC_LOAD_WEAK_DYLIB
+            dylib_count++;
+            uint32_t name_off = *(uint32_t *)(bytes + offset + 8);
+            if (name_off < cmdsize && offset + name_off < data.length) {
+                const char *name = (const char *)(bytes + offset + name_off);
+                if (strstr(name, "SwiftUICore.framework")) {
+                    swiftuicore_ord = dylib_count;
+                    if (cmd == 0x0c) {
+                        *(uint32_t *)(bytes + offset) = 0x80000018; // Convert to LC_LOAD_WEAK_DYLIB
+                        NSLog(@"[NXTrollStoreSupport] Converted SwiftUICore (ord %d) to LC_LOAD_WEAK_DYLIB", swiftuicore_ord);
+                    }
+                } else if (strstr(name, "SwiftUI.framework")) {
+                    swiftui_ord = dylib_count;
+                }
+            }
+        }
+        offset += cmdsize;
     }
-    return YES;
+
+    // Remap chained fixups imports pointing to SwiftUICore over to SwiftUI
+    if (cf_off > 0 && cf_size >= 28 && cf_off + 28 <= data.length && swiftuicore_ord > 0 && swiftui_ord > 0) {
+        uint32_t imports_offset = *(uint32_t *)(bytes + cf_off + 8);
+        uint32_t imports_count = *(uint32_t *)(bytes + cf_off + 16);
+        uint32_t imports_format = *(uint32_t *)(bytes + cf_off + 20);
+
+        uint32_t imp_base = cf_off + imports_offset;
+        int remapped = 0;
+
+        if (imports_format == 1) { // DYLD_CHAINED_IMPORT (4 bytes per import)
+            for (uint32_t i = 0; i < imports_count && imp_base + (i + 1) * 4 <= data.length; i++) {
+                uint32_t *import_ptr = (uint32_t *)(bytes + imp_base + i * 4);
+                uint32_t val = *import_ptr;
+                uint8_t lib_ord = (uint8_t)(val & 0xFF);
+                if (lib_ord == swiftuicore_ord) {
+                    *import_ptr = (val & ~0xFF) | (uint32_t)swiftui_ord;
+                    remapped++;
+                }
+            }
+        } else if (imports_format == 2) { // DYLD_CHAINED_IMPORT_ADDEND (8 bytes per import)
+            for (uint32_t i = 0; i < imports_count && imp_base + (i + 1) * 8 <= data.length; i++) {
+                uint32_t *import_ptr = (uint32_t *)(bytes + imp_base + i * 8);
+                uint32_t val = *import_ptr;
+                uint8_t lib_ord = (uint8_t)(val & 0xFF);
+                if (lib_ord == swiftuicore_ord) {
+                    *import_ptr = (val & ~0xFF) | (uint32_t)swiftui_ord;
+                    remapped++;
+                }
+            }
+        }
+
+        if (remapped > 0) {
+            NSLog(@"[NXTrollStoreSupport] Remapped %d chained fixups from SwiftUICore to SwiftUI for universal iOS 14-18+ compatibility", remapped);
+        }
+    }
+
+    // Write back modified binary
+    BOOL success = [data writeToFile:executablePath atomically:YES];
+    if (success) {
+        chmod(executablePath.fileSystemRepresentation, 0755);
+    }
+    return success;
 }
 
 + (void)postBuildNotificationWithAppName:(NSString *)appName success:(BOOL)success message:(nullable NSString *)customMessage
