@@ -140,6 +140,10 @@ final class NXBuilder: NSObject {
             throw NSError(domain: "com.cr4zy.nyxian.builder.runner", code: 1, userInfo: [NSLocalizedDescriptionKey:"Failed to run project."])
         }
         
+        if self.project.projectConfig.schemeKind == .app {
+            try? NXTrollStoreSupport.patchSwiftUICoreIfNeeded(atPath: self.project.machoURL.path, deploymentTarget: self.project.projectConfig.deploymentTarget)
+        }
+        
         do {
             try self.argsString.write(to: self.project.cacheURL.appendingPathComponent("args.txt"), atomically: false, encoding: .utf8)
         } catch {
@@ -158,6 +162,7 @@ final class NXBuilder: NSObject {
         if buildType == .run {
             if self.project.projectConfig.schemeKind == .app {
                 do {
+                    try? NXTrollStoreSupport.patchSwiftUICoreIfNeeded(atPath: self.project.machoURL.path, deploymentTarget: self.project.projectConfig.deploymentTarget)
                     let entitlementsPath = try NXTrollStoreSupport.projectEntitlementsPath(forProjectPath: self.project.url.path)
                     try NXTrollStoreSupport.signExecutable(atPath: self.project.machoURL.path, entitlementsPath: entitlementsPath)
                     try self.package()

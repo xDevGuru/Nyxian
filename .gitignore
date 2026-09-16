@@ -11,3 +11,7 @@ Nyxian/LindChain/JBSupport/tshelper
 *.xcuserstate
 xcuserdata/
 Shared/kernel
+.agents/
+.claude/
+AGENTS.md
+

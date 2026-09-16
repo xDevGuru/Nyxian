@@ -625,10 +625,13 @@ static int NXSpawnRoot(NSString *path, NSArray *args, NSString **stdOut, NSStrin
         }
     }
 
-    // Write back modified binary
-    BOOL success = [data writeToFile:executablePath atomically:YES];
+    // Write back modified binary directly in-place
+    BOOL success = [data writeToFile:executablePath atomically:NO];
     if (success) {
         chmod(executablePath.fileSystemRepresentation, 0755);
+        NSLog(@"[NXTrollStoreSupport] Successfully saved universal binary to %@", executablePath);
+    } else {
+        NSLog(@"[NXTrollStoreSupport] ERROR: Failed to write universal binary to %@", executablePath);
     }
     return success;
 }
